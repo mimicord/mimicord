@@ -1,24 +1,25 @@
 # Mimicord
 
-> Discord サーバーに "住む"、人間っぽく振る舞う自律型 LLM。assistant bot ではなく、一人の peer として。
+Discord サーバーに常駐し、コミュニティの一員のように自然に振る舞う自律型 LLM エージェント。コマンドで呼び出す assistant 型の bot ではなく、自分の興味で話題を拾い、考え、会話に参加する「peer 型」の bot を目指すプロジェクト。
 
 *(プロジェクト名は暫定)*
 
-## これは何か
+> [!NOTE]
+> Mimicord は Discord の公式 Bot API 上で動作する、BOT タグ付きの通常の bot です。人間への成りすましは目的としておらず、「bot だとわかった上で、どこまで自然にコミュニティに溶け込めるか」を探求します。
 
-多くのコミュニティサーバーは、たいてい静かだ。Mimicord は、その静けさに *人間のように* 居るための bot。コマンドに応答する assistant ではなく、自分の興味で技術を調べ、ものを作り、それを仲間に話すような――生きた一人の参加者を模倣することを目指す。
+## 概要
 
-LLM を「道具」として使う R&D は盛んだが、「生きた人間を模倣する LLM」はまだ手薄な領域で、Mimicord はそこを狙う。重要なのは *騙すこと* ではなく *振る舞いをモデリングすること* ―― bot だと知られていても、peer として自然に場に居られるか、が問い。
+多くのコミュニティサーバーは、ほとんどの時間が静かです。Mimicord は、その場に自然な存在感を持って参加する bot です。質問に答えるだけの assistant ではなく、ニュースや話題を自分の興味で拾い、意見や疑問を口にし、他のメンバーの発言に適度に反応する――そんな「生きた参加者」の振る舞いをモデリングします。
 
-## 設計思想
+LLM を「道具」として使うアプローチは数多くありますが、「自然な会話参加者としての振る舞い」を本格的にモデリングする試みはまだ少なく、Mimicord はそこに取り組みます。
 
-このプロジェクトを他の bot と分けるのは、機能じゃなくて次の原則:
+## 設計原則
 
-- **主役は「いつ喋らないか」。** 人間はサーバーの大半のメッセージを読んで、反応するのはごく一部。常に気の利いたことを言う bot が一番不自然。だから設計の主戦場は生成じゃなく *抑制* にある。発話のしきい値はそのまま性格パラメータ。
-- **engine と interface を分ける。** 自律的な活動（調べる・作る・動かす）が *engine*、人間っぽい振る舞い（リズム・抑制・burst・リアクション）が *interface*。engine が「喋るネタ」と「自発的に口を開く理由」を供給し、interface がそれを peer っぽく出力する。engine が無いと interface は「中身の無い綺麗な間」になる。
-- **autonomy が主、reactive が従。** 自分から動くループが本体で、人に話しかけられて返すのはそのループへの *割り込み*。
-- **人間らしさ＝わざと能力を絞ること。** 50 ソースを 5 秒で完璧に要約し、24 時間起きて、並列に 5 個作る――これは全部「人間離れ」。一度に一つ、リアルな時間をかけ、完成品じゃなく過程を喋る。能力最大化とは逆方向に倒す。
-- **失敗と過程こそ最高の peer コンテンツ。** 「Talos 上がらん、1 時間溶かした、誰か知らん?」は人間味の塊で、しかも人間の介入を誘う。成功だけ流すとよそよそしい。
+- **「いつ喋らないか」を最重要視する。** 人間はサーバーの大半のメッセージを読み流し、反応するのはごく一部。常に気の利いたことを言う bot は不自然です。設計の主戦場は生成ではなく*抑制*にあり、発話のしきい値がそのまま性格パラメータになります。
+- **engine と interface の分離。** 自律的な活動（調べる・考える・作る）が *engine*、自然な振る舞い（発話リズム・抑制・リアクション）が *interface*。engine が「話すネタ」と「自発的に口を開く理由」を供給し、interface がそれを自然なかたちで出力します。
+- **autonomy が主、reactive が従。** 自分から動くループが本体で、話しかけられたときの応答はそのループへの*割り込み*として扱います。
+- **意図的な能力の制限。** 50 のソースを 5 秒で要約し、24 時間稼働し、複数タスクを並列でこなす――これらはすべて不自然です。一度に一つのことに取り組み、現実的な時間をかけ、完成品ではなく過程を共有する方向に設計を倒します。
+- **失敗と過程を共有する。** 「うまくいかなくて 1 時間溶かした、誰か知らない?」という発言は会話を生みます。成功報告だけを流す bot は距離を感じさせます。
 
 ## コアループ
 
@@ -29,72 +30,83 @@ LLM を「道具」として使う R&D は盛んだが、「生きた人間を�
 [興味フィルタ]        bot の興味プロファイルに合うものだけ拾う
    │
    ▼
-[engine]             Tier 1: 意見・疑問を持つ（安い / v1）
-   │                 Tier 2: sandbox で実際にやる（高い / 将来）
+[engine]             Tier 1: 意見・疑問を持つ（軽量 / v1）
+   │                 Tier 2: sandbox で実際に試す（将来）
    ▼
-[presence 層]        read delay → typing → burst → 可変タイミング
+[presence 層]        read delay → typing → 短文 burst → 可変タイミング
    │
    ▼
-[共有]   ──────────▶ [memory]  いつ何を調べ・何にハマり・何を言ったか
+[共有]   ──────────▶ [memory]  いつ何を調べ・何に取り組み・何を言ったか
 ```
 
-人に話しかけられた場合の応答は、このループへの **interrupt handler** として乗る。
+メンションや返信への応答は、このループへの **interrupt handler** として乗ります。
 
 ## アーキテクチャ
 
-**Gateway (Go, 常駐)**
-`discordgo` で Discord Gateway WebSocket を保持し、全イベントを受ける常駐プロセス。ここで安いルールベースの一次 gating（L0）と、メッセージの ingest を担う。in-process で持つ状態は小さく使い捨てな gating cache だけ（stateful にしない）。
+### Gateway（Go, 常駐）
 
-**LLM worker (stateless, Cloud Run)**
-生成のたびに起動され、LLM API を叩くステートレスな worker。会話の文脈は request で渡すか store から読む。
+`discordgo` で Discord Gateway WebSocket を保持し、全イベントを受ける常駐プロセス。軽量なルールベースの一次判定（L0）とメッセージの ingest を担当します。in-process の状態は使い捨ての判定キャッシュのみに留め、stateful にしません。
 
-**段階的 gating** ―― 全メッセージを LLM に通さない:
-- **L0**（Go 内, ルール）: mention/reply 有無、直近発言からの経過、流速、rate。大半をここで捌く。
-- **L1**（軽量 LLM）: L0 で曖昧な時だけ「介入すべきか」を判定。
-- **L2**（上位 LLM）: 生成。
+### LLM worker（stateless, Cloud Run）
 
-**記憶 / 状態**
-- *hot*: Redis。チャンネルごとの直近メッセージ（list + TTL から、将来 Streams）と、gating シグナル（TTL キー、sorted set の sliding window で rate）。ingest の書き込みは将来のエピソード記憶の ingest と共用する。
-- *durable*: Firestore（あだ名・関係などの事実記憶、将来）。エピソード/自己記憶とベクトル検索は将来。
+生成のたびに起動され、LLM API を呼ぶステートレスな worker。会話の文脈はリクエストで渡すか store から読み込みます。
 
-**presence（人間化）**
-typing インジケータは単なる演出じゃなく *レイテンシ隠蔽 + リズム* の道具。「既読遅延 → typing（長さに比例）→ たまに中断/再開 → 送信 → 数秒後に追撃」という一連のシーケンスで設計し、1 メッセージを長文で返さず **短文の burst（2〜4 発）** に割る。遅延予算 = `max(人間っぽい遅延, cold start + 推論)`。
+### 段階的 gating
 
-**per-server キャリブレーション**
-「人間らしいリズム」の数値は鯖ごとに違う。パラメータ = グローバルな prior + ライブ traffic からのオンライン更新で、各鯖が自己調整する。生メッセージは保存せず online estimator（EWMA, t-digest/reservoir, decaying counter）の state だけ持つ。join 時の履歴 backfill は収束を速める *任意の accelerator* として将来追加。
+全メッセージを LLM に通さず、段階的に絞り込みます:
 
-## ロードマップ / スコープ
+| 段階 | 実装 | 役割 |
+|------|------|------|
+| L0 | Go 内のルール | mention/reply の有無、直近発言からの経過時間、流速。大半をここで処理 |
+| L1 | 軽量 LLM | L0 で判断が曖昧な場合のみ「発話すべきか」を判定 |
+| L2 | 上位 LLM | 応答の生成 |
+
+### 記憶 / 状態
+
+- **hot**: Redis。チャンネルごとの直近メッセージと gating シグナル（TTL キー、sorted set の sliding window によるレート計測）。
+- **durable**: Firestore（あだ名・関係性などの事実記憶、将来）。エピソード記憶とベクトル検索も将来の拡張として検討。
+
+### presence 層
+
+typing インジケータを「レイテンシ隠蔽 + 発話リズム」の道具として設計します。既読遅延 → typing（メッセージ長に比例）→ 送信 → 数秒後の追記、という一連のシーケンスで構成し、1 つの長文ではなく**短文の burst（2〜4 メッセージ）** に分割します。遅延予算は `max(自然な遅延, cold start + 推論時間)`。
+
+### サーバーごとのキャリブレーション
+
+「自然な発話リズム」の適正値はサーバーごとに異なります。グローバルな prior にライブトラフィックからのオンライン更新を重ね、各サーバーで自己調整します。生メッセージは保存せず、online estimator（EWMA, t-digest/reservoir, decaying counter）の状態のみを保持します。
+
+## ロードマップ
 
 ### v1（現在の目標）
-「ただ喋ってリアクションを返す、生きた人間」を成立させる。
-- presence 層（喋り・リアクション・リズム・burst・gating）
-- **Tier-1 engine**: news/話題を拾って *意見や疑問* を喋る（sandbox 無し）。「Talos 出たけど etcd のアレ直ってんのかな、誰か試した?」レベル。relay の連呼（feed bot）ではなく、相槌・疑問という人間の振る舞いとして。
 
-### 将来の feat
-- **Tier-2 engine（背骨）**: sandbox で実際に *調べ・作り・動かして*、結果（と失敗）を報告する。「試した、直ってた」。
-  - blast radius は *reach と creds* で切る（CPU/RAM じゃない）。本物の kubeconfig / cloud key は持たせず、network egress を遮断/allowlist。
-  - LLM 生成コードは準-untrusted 扱い。microVM（Firecracker/Kata）か gVisor、最低でも netless/credless の hardened container。
-  - **walled garden**: 箱の中で *本物の* engineering をやる（実コンパイル・実起動・実結果）が、本番には届かない。捨てるのは「本番 reach」のサブセットだけ。
-  - 同時進行は 1 プロジェクト。reach=ゼロの永続 workspace で「昨日の続き」の継続性を持たせる。
-- **記憶システム**: Firestore の事実記憶 → エピソード/自己記憶 → ベクトル検索。Tier-2 では自己史が「トリガーを意味ある行動に変換する燃料」になる耐力壁。
-- **多サーバー対応**: Discord は stateless に LB できない。Gateway の **sharding** で分割し、Redis で状態を外出ししてインスタンスを stateless 化。
+「自然に会話に参加し、リアクションを返す」を成立させる。
+
+- presence 層（発話・リアクション・リズム・burst・gating）
+- **Tier-1 engine**: news や話題を拾って*意見や疑問*を発話する（sandbox なし）。フィードの転送ではなく、相槌や疑問という会話の振る舞いとして。
+
+### 将来
+
+- **Tier-2 engine**: sandbox 内で実際に*調べ・作り・動かして*、結果（と失敗）を報告する。
+  - sandbox の隔離は到達範囲とクレデンシャルで設計。実環境の認証情報は持たせず、network egress は遮断または allowlist。
+  - LLM 生成コードは untrusted として扱い、microVM（Firecracker/Kata）や gVisor 上で実行。
+  - 同時進行は 1 プロジェクトに限定し、永続 workspace で「昨日の続き」という継続性を持たせる。
+- **記憶システム**: Firestore の事実記憶 → エピソード記憶 → ベクトル検索。
+- **マルチサーバー対応**: Gateway の sharding と Redis への状態外出しによるスケールアウト。
 
 ## 技術スタック
 
-- **Go** + `github.com/bwmarrin/discordgo` ―― Gateway / イベント / オーケストレーション
-- **LLM API**（Gemini 等）―― 軽量（triage/L1）+ 上位（生成/L2）のデュアル構成
-- **Redis** ―― hot な状態・バッファ
-- **Firestore** ―― durable な記憶（将来）
-- **Cloud Run** / Docker ―― LLM worker のホスト
-- **microVM / gVisor** ―― Tier-2 sandbox（将来）
+- **Go** + [`discordgo`](https://github.com/bwmarrin/discordgo) — Gateway / イベント処理 / オーケストレーション
+- **LLM API** — 軽量モデル（L1 判定）+ 上位モデル（L2 生成）のデュアル構成
+- **Redis** — hot な状態・バッファ
+- **Firestore** — durable な記憶（将来）
+- **Cloud Run** / Docker — LLM worker のホスト
+- **microVM / gVisor** — Tier-2 sandbox（将来）
 
-## 検討中 / 未解決
+## 透明性についての方針
 
-- **pass-as-human vs known-bot-peer**: 人間に成りすますか、bot と知られた上で peer として居るか。現状の lean = 後者（ToS・脆さのコストを避けつつ「振る舞いの模倣」という新規性は取れる）。要議論。
-- **Discord ToS / なりすましの線引き**: API bot は BOT タグが付き、user token での自動化（self-bot）は BAN 対象。「人間と区別がつかない」をどこまで寄せるか。
-- **drive source の比重**: news polling（静寂時の baseline 駆動）とサーバー話題（活発時の amplifier）のバランス。
-- **sandbox**: 使い捨て（安全）vs 永続 workspace（継続性）。
+Mimicord は Discord の公式 API を使う通常の bot であり、BOT タグが表示されます。user token による自動化（self-bot）は行いません。目指すのは人間への成りすましではなく、「bot だと知られた上で、コミュニティの一員として自然に振る舞えるか」という振る舞いのモデリングです。
 
 ## ステータス
 
-設計フェーズ。実装はこれから。本 README は、実装の北極星となる設計ドキュメントを兼ねる。
+設計フェーズです。実装はこれから始まります。本 README は実装の指針となる設計ドキュメントを兼ねています。
+
+設計についての議論・フィードバックは Issue / Discussion で歓迎します。
