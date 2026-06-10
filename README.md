@@ -97,7 +97,7 @@ typing インジケータを「レイテンシ隠蔽 + 発話リズム」の道�
 - **Go** + [`discordgo`](https://github.com/bwmarrin/discordgo) — Gateway / イベント処理 / オーケストレーション
 - **LLM API** — 軽量モデル（L1 判定）+ 上位モデル（L2 生成）のデュアル構成
 - **Redis** — hot な状態・バッファ
-- **Firestore** — durable な記憶（将来)
+- **Firestore** — durable な記憶（将来）
 - **Cloud Run** / Docker — LLM worker のホスト
 - **microVM / gVisor** — Tier-2 sandbox（将来）
 
