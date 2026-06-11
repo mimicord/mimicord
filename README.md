@@ -66,7 +66,7 @@ LLM を「道具」として使うアプローチは数多くありますが、�
 
 `discordgo` で Discord Gateway WebSocket を保持し、全イベントを受ける常駐プロセス。軽量なルールベースの一次判定（L0）とメッセージの ingest を担当します。in-process の状態は使い捨ての判定キャッシュのみに留め、stateful にしません。
 
-### LLM worker（stateless, Cloud Run）
+### LLM worker（stateless）
 
 生成のたびに起動され、LLM API を呼ぶステートレスな worker。会話の文脈はリクエストで渡すか store から読み込みます。
 
@@ -135,7 +135,7 @@ alpha の「成功」を次の 3 つで定義します。
 - **LLM API** — 軽量モデル（L1 判定）+ 上位モデル（L2 生成）のデュアル構成
 - **Redis** — hot な状態・バッファ
 - **Firestore** — durable な記憶（将来）
-- **Cloud Run** / Docker — LLM worker のホスト
+- **Kubernetes（GKE）** — Gateway / LLM worker のホスト。デプロイは ArgoCD による GitOps（作者インスタンスの設定は private リポジトリ側）
 - **microVM / gVisor** — Tier-2 sandbox（将来）
 
 ## 透明性についての方針
