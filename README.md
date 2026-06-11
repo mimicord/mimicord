@@ -135,7 +135,7 @@ alpha の「成功」を次の 3 つで定義します。
 - **LLM API** — 軽量モデル（L1 判定）+ 上位モデル（L2 生成）のデュアル構成
 - **Redis** — hot な状態・バッファ
 - **Firestore** — durable な記憶（将来）
-- **Kubernetes（GKE）** — Gateway / LLM worker のホスト。デプロイは ArgoCD による GitOps（作者インスタンスの設定は private リポジトリ側）
+- **コンテナ（Docker）** — Gateway / LLM worker の配布形態。実行基盤は特定しない（Docker 単体・Kubernetes・VM 直置きのいずれも可）。作者インスタンスは GKE + ArgoCD（GitOps）で運用（設定は private リポジトリ側）
 - **microVM / gVisor** — Tier-2 sandbox（将来）
 
 ## 透明性についての方針
