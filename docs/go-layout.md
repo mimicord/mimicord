@@ -1,6 +1,6 @@
 # Go プロジェクト構成
 
-> 実装着手前の責務マップを固定するための文書。本リポジトリ README の「アーキテクチャ」と [docs/behavior-mapping.md](behavior-mapping.md) を、Go パッケージ構成に落とす。
+> 実装着手前の責務マップを固定するための文書。本リポジトリ README の「アーキテクチャ」と [behavior-mapping.md](behavior-mapping.md) を、Go パッケージ構成に落とす。
 
 ## 方針
 
@@ -37,7 +37,7 @@ mimicord/
 └── README.md
 ```
 
-`cmd/worker` と `store/firestore` は必要になるまで作らない([docs/behavior-mapping.md](behavior-mapping.md) の分離条件)。
+`cmd/worker` と `internal/store/firestore` は必要になるまで作らない([behavior-mapping.md](behavior-mapping.md) の分離条件)。
 
 ## 各パッケージの責務と非責務
 
@@ -101,4 +101,4 @@ flowchart TD
 
 ## 実装①の最小セット
 
-実装①(Gateway 接続 + L0 gating + 安全装置)で作るのは: `cmd/gateway` / `app` / `config`(最小)/ `discord` / `gating/l0` / `safety` / `store/redis` / `slash`(mute・unmute・status のみ)。この時点では bot は**メンションに定型文で応答する程度**でよく(generate は実装②)、安全装置とイベント処理の骨格を先に固める。
+実装①(Gateway 接続 + L0 gating + 安全装置)で作るのは: `cmd/gateway` / `app` / `config`(最小) / `discord` / `gating/l0` / `safety` / `store/redis` / `slash`(mute・unmute・status のみ)。この時点では bot は**メンションに定型文で応答する程度**でよく(generate は実装②)、安全装置とイベント処理の骨格を先に固める。
