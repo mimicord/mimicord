@@ -38,7 +38,7 @@ flowchart LR
 
 1. **送信の単一出口**: Discord への通常メッセージ送信・typing・リアクション付与は `internal/presence` だけが行う。例外はスラッシュコマンドの interaction 応答(`internal/slash`)のみ。
 2. **safety の三重チェックポイント**: ①候補の受付時(mute / channel allowlist)、② LLM 呼び出し直前(予算)、③送信直前(発話レート / mute 再確認)。チェックはすべて `internal/safety` の関数呼び出しで、判定状態は Redis に置く(再起動・複数箇所からの参照に耐える)。
-3. **同時生成は 1 件**(global semaphore)。「一度に一つのことに取り組む」(README「設計原則 / 意図的な能力の制限」)のコードへの翻訳。interrupt 候補は engine 候補より優先し、待たされて陳腐化した engine 候補は捨てる(後から無理に発話しない)。
+3. **同時生成はサーバー(ギルド)ごとに 1 件**(ギルド単位の semaphore)。「一度に一つのことに取り組む」(README「設計原則 / 意図的な能力の制限」)のコードへの翻訳で、各サーバーで bot が同時に複数の発話を進めないことを保証する(別サーバーの生成と並行するのは構わない。マルチサーバー化の前提)。interrupt 候補は engine 候補より優先し、待たされて陳腐化した engine 候補は捨てる(後から無理に発話しない)。
 4. **すべての LLM 呼び出しは `internal/llm` を経由**し、usage(トークン・概算費用)が safety の予算カウンタに記録される。直接プロバイダ SDK を叩くコードを書かない。モデル変更の影響範囲をこの 1 パッケージに閉じることで、運用しながらのモデル差し替えを安全に行えるようにする。
 5. **ingest は応答と独立**: 全メッセージイベントは応答するかどうかに関係なく、文脈バッファと流速カウンタ(Redis・TTL 付き)に記録される。
 
@@ -58,7 +58,7 @@ flowchart LR
 | スラッシュコマンド | `internal/slash` | safety / config の操作入口 |
 | 人格 config・運用パラメータ | `internal/config` | ファイル + 実行時オーバーレイ |
 | hot state アクセス | `internal/store/redis` | 型付きアクセサ |
-| 配線・ライフサイクル・パイプライン制御 | `internal/app` | semaphore・優先度・candidate キュー |
+| 配線・ライフサイクル・パイプライン制御 | `internal/app` | サーバー(ギルド)単位の semaphore・優先度・candidate キュー |
 
 ## シーケンス 1: 起動・Gateway 接続(実装①)
 
@@ -126,8 +126,8 @@ sequenceDiagram
     participant P as presence
     participant D as discord
 
-    A->>A: interrupt 候補を優先キューへ(engine 候補より先に処理)
-    A->>A: 生成 semaphore 取得(進行中の engine 生成があれば cancel)
+    A->>A: interrupt 候補を優先キューへ(同サーバーの engine 候補より先に処理)
+    A->>A: 生成 semaphore 取得(同サーバーで進行中の engine 生成があれば cancel)
     A->>S: 予算チェック(超過していれば生成しない)
     A->>G: Generate(候補, 文脈)
     G->>LM: L2 呼び出し(人格 + 直近文脈 + 対象メッセージ)
