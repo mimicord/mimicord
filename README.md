@@ -93,6 +93,13 @@ typing インジケータを「レイテンシ隠蔽 + 発話リズム」の道�
 
 「自然な発話リズム」の適正値はサーバーごとに異なります。グローバルな prior にライブトラフィックからのオンライン更新を重ね、各サーバーで自己調整します。生メッセージは保存せず、online estimator（EWMA, t-digest/reservoir, decaying counter）の状態のみを保持します。alpha では単一サーバーでの運用が前提ですが、この機構は将来のマルチサーバー化を見据えてサーバー単位で設計します。
 
+### 実装の指針
+
+本 README の論理設計を、実装の責務マップへ落としたドキュメントを `docs/` 配下に置いています:
+
+- [docs/behavior-mapping.md](docs/behavior-mapping.md) — 動作 → コードのマッピング(発話候補パイプライン・シーケンス図)
+- [docs/go-layout.md](docs/go-layout.md) — Go プロジェクト構成と依存ルール
+
 ## ロードマップ
 
 ### alpha（現在の目標）
